@@ -1,0 +1,15 @@
+# Note: DO NOT use quantized model or quantization_bit when merging lora adapters
+
+# model
+model_name_or_path: "/mnt/newdisk/MultiLLM_models/Qwen/Qwen2-VL-7B-Instruct/"
+adapter_name_or_path: "/mnt/newdisk/KJY/MultiLLM/saves/Qwen2VL-7B-Instruct/lora/train_en/"
+template: qwen2_vl
+finetuning_type: lora
+
+# export
+export_dir: "/mnt/newdisk/KJY/MultiLLM/models/qwen-vl-7b-en/"
+export_size: 2
+export_device: cpu
+export_legacy_format: false
+# export_hub_model_id: FFFly66/My-LLaVA-7B
+# hf_hub_token: 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

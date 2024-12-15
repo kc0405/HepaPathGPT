@@ -1,0 +1,8 @@
+[2024-10-15 10:43:54,260] [INFO] [real_accelerator.py:203:get_accelerator] Setting ds_accelerator to cuda (auto detect)
+START /usr/bin/firefox "http://localhost:7860/"
+No protocol specified
+Error: cannot open display: :0.0
+xdg-open: no method available for opening 'http://localhost:7860/'
+/home/chuannong1/anaconda3/envs/llama_factory/lib/python3.10/site-packages/gradio/analytics.py:106: UserWarning: IMPORTANT: You are using gradio version 4.44.0, however version 5.0.1 is available, please upgrade. 
+--------
+  warnings.warn(

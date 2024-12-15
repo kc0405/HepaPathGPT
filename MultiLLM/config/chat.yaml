@@ -1,0 +1,3 @@
+model_name_or_path: /home/chuannong1/KJY/MultiLLM/LLaMA-Factory/models/llava1_5-7b
+template: llava
+# visual_inputs: true
