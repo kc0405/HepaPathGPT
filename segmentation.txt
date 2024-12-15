@@ -1,0 +1,86 @@
+import SimpleITK as sitk
+import os
+import numpy as np
+import cv2
+import glob
+from paddleseg.models import SegFormer
+from paddleseg.core import predict
+import paddleseg.transforms as T
+from paddleseg.cvlibs import manager
+from PIL import Image
+
+# 设置标准化路径
+BASE_DIR = "/path/to/data"  # 修改为您的数据基准目录
+NII_INPUT_DIR = os.path.join(BASE_DIR, "input_nii")
+JPG_OUTPUT_DIR = os.path.join(BASE_DIR, "output_jpg")
+RESULTS_DIR = os.path.join(BASE_DIR, "results")
+MODEL_PATH = "/path/to/seg_model.pdparams"  # 修改为您已训练好的模型路径
+
+# 确保输出目录存在
+os.makedirs(JPG_OUTPUT_DIR, exist_ok=True)
+os.makedirs(os.path.join(JPG_OUTPUT_DIR, "origin"), exist_ok=True)
+os.makedirs(RESULTS_DIR, exist_ok=True)
+
+# 将 .nii 文件转换为 .jpg 切片
+def nii_to_jpg_slices(nii_dir, jpg_output_dir):
+    count = 0
+    for nii_file in os.listdir(nii_dir):
+        nii_path = os.path.join(nii_dir, nii_file)
+        nii_image = sitk.GetArrayFromImage(sitk.ReadImage(nii_path))
+        for i in range(nii_image.shape[0]):
+            slice_img = nii_image[i, :, :]
+            slice_img = np.rot90(np.transpose(slice_img, (1, 0)))
+            cv2.imwrite(os.path.join(jpg_output_dir, "origin", f"{count}.jpg"), slice_img)
+            count += 1
+    print(f"Converted {count} slices from NII to JPG.")
+    return count
+
+# 加载训练好的SegFormer模型
+def load_trained_model():
+    model = SegFormer(
+        backbone=manager.BACKBONES['MixVisionTransformer_B5'](),
+        embedding_dim=768,
+        num_classes=2  # 根据实际情况修改类别数量
+    )
+    model.set_dict(paddle.load(MODEL_PATH))  # 加载已训练好的模型参数
+    model.eval()  # 切换为评估模式
+    return model
+
+# 对 JPG 切片进行预测并保存病灶区域图像
+def run_prediction(model, image_list, save_dir):
+    transforms = T.Compose([
+        T.Resize(target_size=(512, 512)),
+        T.Normalize()
+    ])
+    
+    for img_path in image_list:
+        # 加载图像
+        img = cv2.imread(img_path)
+        # 执行预测
+        result = predict(
+            model,
+            transforms=transforms,
+            image_list=[img_path],
+            save_dir=save_dir,
+            custom_color=None
+        )
+        
+        # 从结果中提取病灶区域并保存为 JPG
+        lesion_img = result['pred'][0]  # 提取病灶区域
+        lesion_img_path = os.path.join(save_dir, f"lesion_{os.path.basename(img_path)}")
+        cv2.imwrite(lesion_img_path, lesion_img)
+    print("Saved lesion images in JPG format.")
+
+# 主函数
+if __name__ == "__main__":
+    # 将 NII 转换为 JPG 切片
+    slice_count = nii_to_jpg_slices(NII_INPUT_DIR, JPG_OUTPUT_DIR)
+
+    # 准备 JPG 切片路径列表
+    jpg_slices = sorted(glob.glob(os.path.join(JPG_OUTPUT_DIR, "origin", "*.jpg")))
+
+    # 加载已训练好的模型
+    model = load_trained_model()
+
+    # 运行预测并保存病灶图像
+    run_prediction(model, jpg_slices, RESULTS_DIR)
